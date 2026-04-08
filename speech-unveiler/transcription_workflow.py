@@ -54,10 +54,10 @@ class TranscriptionWorkflow(LanguageFileManager):
         self.summarizer_config = summarizer_config
         self.topic_extractor_config = topic_extractor_config
 
-    def get_file_names_and_extensions(self, list_of_file_names):
+    def get_file_names_and_extensions(self, list_of_file_names, preserve_folder=False):
         for file in list_of_file_names:
-            file_without_folder = re.split("[/\\\\]", file)[-1]
-            file_name_bits = file_without_folder.split(".")
+            file_without_folder = re.split("[/\\\\]", file)[-1] if not preserve_folder else file
+            file_name_bits = file_without_folder.rsplit(".", 1)
             extension = file_name_bits[-1]
             file_name_without_extension = "".join(file_name_bits[:-1])
             yield file_name_without_extension, extension
@@ -115,7 +115,11 @@ class TranscriptionWorkflow(LanguageFileManager):
                 file, _ = file_and_extension
                 AudioExtractor().convert(path, file + "/" + file + ".mp3")
         if self.transcription_config:
-            self.transcribe(files_with_folder)
+            if self.convert_video_to_audio:
+                self.transcribe(files_with_folder)
+            else:
+                audio_files_without_extension = [file for file, _ in self.get_file_names_and_extensions(list_of_file_names, preserve_folder=True)]
+                self.transcribe(audio_files_without_extension)
         if self.summarizer_config:
             self.summarize(files_with_folder)
         if self.topic_extractor_config:
